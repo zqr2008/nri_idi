@@ -2,7 +2,10 @@ from itertools import count
 from cv2 import sort
 import pandas as pd
 import numpy as np
-import cmath
+import math
+from pip import main
+from scipy.stats import norm
+
 
 def pretreat(old_model,new_model,gold_std):
     """
@@ -93,27 +96,51 @@ def nri_cal(df,n):
     pdown_ne = ndown_ne/nb    
     
     nri_ev = pup_ev - pdown_ev   #event NRI
-    v_nri_ev = (nup_ev + ndown_ev)/(na^2) - ((nup_ev - ndown_ev)^2)/(na^3)
-    se_nri_ev = cmath.sqrt(v_nri_ev) #SE of NRI of events
+    v_nri_ev = (nup_ev + ndown_ev)/(na**2) - ((nup_ev - ndown_ev)**2)/(na**3)
+    se_nri_ev = math.sqrt(v_nri_ev) #SE of NRI of events
     z_nri_ev = nri_ev/se_nri_ev #Z score for NRI of events
+    ev_ci_high = nri_ev + 1.96*se_nri_ev
+    ev_ci_low = nri_ev -1.96*se_nri_ev
+    
     
     nri_ne = pdown_ne - pup_ne #nonevent NRI
-    v_nri_ne = (ndown_ne + nup_ne)/(nb^2) - ((ndown_ne - nup_ne)^2)/(nb^3)
-    se_nri_ne = cmath.sqrt(v_nri_ne) #SE of NRI of non-events
+    v_nri_ne = (ndown_ne + nup_ne)/(nb**2) - ((ndown_ne - nup_ne)**2)/(nb**3)
+    se_nri_ne = math.sqrt(v_nri_ne) #SE of NRI of non-events
     z_nri_ne = nri_ne/se_nri_ne #Z score for NRI of non-events
+    ne_ci_high = nri_ne + 1.96*se_nri_ne
+    ne_ci_low = nri_ne -1.96*se_nri_ne
     
     nri = pup_ev - pdown_ev - (pup_ne - pdown_ne)
-    se_nri = cmath.sqrt(v_nri_ev + v_nri_ne) #standard error of NRI
+    se_nri = math.sqrt(v_nri_ev + v_nri_ne) #standard error of NRI
     z_nri  = nri/se_nri #Z score for NRI
+    ci_high = nri + 1.96*se_nri
+    ci_low = nri -1.96*se_nri
+    p_value_nri = 2*norm.cdf(-abs(z_nri))
 
-    
+
     improveSens =  sum(d[a])/na
     improveSpec = -sum(d[b])/nb
+    
     idi = np.mean(d[a]) - np.mean(d[b]) #Integrated Discrimination Index
-    var_ev = np.var(d[a])/na
-    var_ne = np.var(d[b])/nb
-    se_idi = cmath.sqrt(var_ev + var_ne) #SE of IDI
+    var_ev = (np.var(d[a])/(na-1))   #note here np.var in  python return population variance but var() function in R return sample variance.
+    var_ne = (np.var(d[b])/(nb-1)) 
+    se_idi = math.sqrt(var_ev + var_ne) #SE of IDI
+    idi_upper = idi+1.96*se_idi
+    idi_lower = idi-1.96*se_idi
     z_idi = idi/se_idi #Z score of IDI
+    p_value_idi = 2*norm.cdf(-abs(z_idi))
+    
+    col= ['NRI','NRI for events','NRI for non-events','idi']
+    table =['index', 'SE', 'Z', '95_lower_ci','95_upper_ci','p-value']
+    index=[[round(nri,4),se_nri,z_nri,ci_low,ci_high,round(p_value_nri,4)],
+           [round(nri_ev,4),se_nri_ev,z_nri_ev,ev_ci_low,ev_ci_high,''],
+           [round(nri_ne,4),se_nri_ne,z_nri_ne,ev_ci_low,ne_ci_high,''],
+           [round(idi,4),se_idi,z_idi,idi_lower,idi_upper,round(p_value_idi,4)]]
+    
+    df2=pd.DataFrame(data=index,columns=table, index=col)
+    print(df2)
+    
+    
     
     dataoutput={"total_sample number":n, 
                 "number of patients":na, 
@@ -122,7 +149,9 @@ def nri_cal(df,n):
                 "fraction of new predicts positive while old predicts negaitve in healthy":pup_ne,
                 "fraction of new predicts negative while old predicts positive in patients":pdown_ev,
                 "fraction of new predicts negative while old predicts positive in healthy":pdown_ne,
-                "Net Reclassification Index(NRI)":nri,
+                "Net Reclassification Index(NRI)":round(nri,4),
+                "CI of nri":"{} to {}".format(round(ci_high,4),round(ci_low,4)),
+                "p_value_nri":round(p_value_nri,4),
                 "standard error of NRI":se_nri,   
                 "Z score for NRI":z_nri,
                 "event NRI" :nri_ev, 
@@ -133,26 +162,37 @@ def nri_cal(df,n):
                 "Z score for NRI of non-events":z_nri_ne,
                 "improvement in sensitivity":improveSens,
                 "improvement in specificity":improveSpec,
-                "se.idi":idi, 
+                "idi":round(idi,4), 
+                "CI of idi":"{} to {}".format(round(idi_upper,4),round(idi_lower,4)),
+                "p value of idi":p_value_idi,
                 "Z score of IDI":z_idi}
-    data= pd.DataFrame(dataoutput,index=[0])
+   
+    data = pd.DataFrame(dataoutput,index=[0])
+    data = data.T
+    #print("second output",data)
+  
     
+    return df2
 
-    
-    return data
+def main(example,old,new,gold):
+    """ main function that connect the two functions
 
-
-if __name__ == '__main__':
-    example=pd.read_csv(r"C:\Users\mjdee\Desktop\example.csv")
-    old_model = example['old_model']
-    new_model = example['new_model']
-    gold_std = example['gold_std']
-    dic={"old_model":old_model,
-         "new_model":new_model,
-         "gold_std":gold_std}
-
+    Args:
+        example (_type_): dataframe contains all information
+        old (_type_): the colunm name of the old model prediction 
+        new (_type_): the colunm name of the new model prediction 
+        gold (_type_):  the colunm name of the real status 
+    """    
+    old_model = example[new]
+    new_model = example[old]
+    gold_std = example[gold]
 
     df,y=pretreat(old_model,new_model,gold_std)
-    data= nri_cal(df,y)
-    data.to_csv(r"C:\Users\mjdee\Desktop\nri_result.csv")
-    #print(ndown_ev,ndown_ne)
+    df2 =nri_cal(df,y)
+    print(df2)
+    return(df2)
+    
+    
+
+
+    
