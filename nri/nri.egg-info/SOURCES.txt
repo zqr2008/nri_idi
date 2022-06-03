@@ -1,0 +1,5 @@
+setup.py
+nri.egg-info/PKG-INFO
+nri.egg-info/SOURCES.txt
+nri.egg-info/dependency_links.txt
+nri.egg-info/top_level.txt
