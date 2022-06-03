@@ -7,6 +7,14 @@ The ``nri`` function does all the math. You can import ``nri`` function from ``n
 
 ``nri(df,"old_model","new_model","gold_std")
 ``
+###  where 
+>        example (dataframe): dataframe contains all information
+>         
+>        old (string): the colunm name of the old model prediction 
 
+>        new (string): the colunm name of the new model prediction 
+      
+>        gold (string):  the colunm name of the real status 
+        
 It will return the calculated result.
 
