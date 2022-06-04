@@ -191,8 +191,3 @@ def nri(example,old,new,gold):
     df2 =nri_cal(df,y)
     print(df2)
     return(df2)
-    
-    
-
-
-    
