@@ -101,7 +101,8 @@ def nri_cal(df,n):
     se_nri_ev = math.sqrt(v_nri_ev) #SE of NRI of events
     z_nri_ev = nri_ev/se_nri_ev #Z score for NRI of events
     ev_ci_high = nri_ev + 1.96*se_nri_ev
-    ev_ci_low = nri_ev -1.96*se_nri_ev
+    ev_ci_low = nri_ev - 1.96*se_nri_ev
+    p_value_nri_ev ="%.20f" % (2*norm.cdf(-abs(z_nri_ev)))
     
     
     nri_ne = pdown_ne - pup_ne #nonevent NRI
@@ -110,6 +111,7 @@ def nri_cal(df,n):
     z_nri_ne = nri_ne/se_nri_ne #Z score for NRI of non-events
     ne_ci_high = nri_ne + 1.96*se_nri_ne
     ne_ci_low = nri_ne -1.96*se_nri_ne
+    p_value_nri_ne ="%.20f" % (2*norm.cdf(-abs(z_nri_ne)))
     
     nri = pup_ev - pdown_ev - (pup_ne - pdown_ne)
     se_nri = math.sqrt(v_nri_ev + v_nri_ne) #standard error of NRI
@@ -131,14 +133,14 @@ def nri_cal(df,n):
     z_idi = idi/se_idi #Z score of IDI
     p_value_idi = "%.20f" % (2*norm.cdf(-abs(z_idi)))
     
-    col= ['NRI','NRI for events','NRI for non-events','idi']
-    table =['index', 'SE', 'Z', '95_lower_ci','95_upper_ci','p-value']
-    index=[[round(nri,4),se_nri,z_nri,ci_low,ci_high,p_value_nri],
-           [round(nri_ev,4),se_nri_ev,z_nri_ev,ev_ci_low,ev_ci_high,''],
-           [round(nri_ne,4),se_nri_ne,z_nri_ne,ne_ci_low,ne_ci_high,''],
-           [round(idi,4),se_idi,z_idi,idi_lower,idi_upper,p_value_idi]]
+    col= ['NRI','NRI for events','NRI for non-events','IDI']
+    table =['index with 95 CI','SE', 'Z','p-value']
+    index=[["{}({}-{})".format(round(nri,2),round(ci_low,2),round(ci_high,2)),round(se_nri,2),round(z_nri,2),p_value_nri],
+           ["{}({}-{})".format(round(nri_ev,2),round(ev_ci_low,2),round(ev_ci_high,2)),round(se_nri_ev,2),round(z_nri_ev,2),p_value_nri_ev],
+           ["{}({}-{})".format(round(nri_ne,2),round(ne_ci_low,2),round(ne_ci_high,2)),round(se_nri_ne,2),round(z_nri_ne,2),p_value_nri_ne],
+           ["{}({}-{})".format(round(idi,2),round(idi_lower,2),round(idi_upper,2)),round(se_idi,2),round(z_idi,2),p_value_idi]]
     
-    df2=pd.DataFrame(data=index,columns=table, index=col)    
+    df2=pd.DataFrame(data=index, columns=table, index=col)    
     
     dataoutput={"total_sample number":n, 
                 "number of patients":na, 
@@ -189,3 +191,8 @@ def nri(example,old,new,gold):
     df2 =nri_cal(df,y)
     print(df2)
     return(df2)
+    
+    
+
+
+    
